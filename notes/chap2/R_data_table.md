@@ -148,6 +148,60 @@ dt[, .(total = .N, mean_col2 = mean(col2)), by = col1]
 
 在这里，我们使用 `total = .N` 计算每组的行数，`mean_col2 = mean(col2)` 计算 `col2` 列的均值。
 
+### 7. 自定义函数
+
+可以在R中自定义函数, 并把该函数作用到表上
+
+应用场景: 
+
+- 清除数据集中的NA值
+
+  ```R
+  # 计算一行中NA的数量, 并删除数量大于2的行(因为正常的只有最后两列为NA)
+  data_clean <- data[apply(data, 1, function(x) sum(is.na(x))) <= 2]
+  ```
+
+  - `apply`函数
+
+    `apply` 用于数组（包括矩阵）或数据框（`data.frame`）对象。
+
+    会沿着指定的维度（行或列）应用一个函数
+
+    ```R
+    apply(X, MARGIN, FUN, ..., simplify = TRUE)
+    # MARGIN: for a matrix 1 indicates rows, 2 indicates columns, c(1, 2) indicates rows and columns.
+    ```
+
+- 处理异常数据时自定义函数
+
+  ```R
+  # 但是经检查, 发现有负数异常值
+  # 策略: 用该负数前面的5个正常数的平均值替换负数
+  replace_neg_with_avg <- function(x) {
+      for(i in seq_along(x)) {
+          if(x[i] < 0) {
+              start_idx <- max(1, i - 5)
+              end_idx <- i - 1
+              if (start_idx <= end_idx) {
+                  avg_val <- mean(x[start_idx:end_idx])
+                  x[i] <- avg_val
+              }
+          }
+      }
+      return(x)
+  }
+  
+  env[, lapply(.SD, replace_neg_with_avg)] # .SD: 代表数据集的子集
+  ```
+
+  - `lapply函数`
+
+    **语法**：`lapply(X, FUN, ...)`
+
+    `lapply` 主要用于列表（`list`）或向量（`vector`）对象
+
+    对列表的每个元素应用一个函数，并(总是)返回一个列表
+
 ------
 
 ### `data.table` 的优势
