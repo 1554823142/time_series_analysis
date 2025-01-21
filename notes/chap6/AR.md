@@ -39,4 +39,133 @@ $$
   | 自回归模型           | $$ARIMA(p,0,0)$$                  |
   | 移动平均模型         | $$ARIMA(0,0,q)$$                  |
 
+  - R中的`arima`函数
   
+    - 语法:
+  
+      ```R
+      arima(x, order = c(p, d, q), seasonal = list(order = c(P, D, Q), period = s),
+            xreg = NULL, include.drift = FALSE, method = c("CSS-ML", "ML"), ...)
+      ```
+  
+      - `order`:包含3个整数的向量, 表示ARIMA模型的参数(p, d, q)
+  
+  - R中一种更加简单拟合arima模型的方法：`auto.arima()`
+  
+    自动选择最优的 ARIMA 模型阶数。用户只需要提供时间序列数据，函数会自动进行阶数选择，避免了手动选择 `p`、`d`、`q` 的麻烦
+  
+    - 示例:参照[**预测:方法与实践**](https://otexts.com/fppcn/)
+  
+      ```R
+      library(fpp2)
+      # 查看 uschange 数据
+      data("uschange")
+      autoplot(uschange[,"Consumption"]) +
+        xlab("年份") + ylab("季度占比变化")+
+        theme(plot.title = element_text(hjust = 0.5))
+      
+      fit <- auto.arima(uschange[,"Consumption"], seasonal = FALSE)
+      ```
+  
+      输出如下:
+  
+      ```javascript
+      Series: uschange[, "Consumption"] 
+      ARIMA(1,0,3) with non-zero mean 
+      
+      Coefficients:
+               ar1      ma1     ma2     ma3    mean
+            0.5885  -0.3528  0.0846  0.1739  0.7454
+      s.e.  0.1541   0.1658  0.0818  0.0843  0.0930
+      
+      sigma^2 = 0.3499:  log likelihood = -164.81
+      AIC=341.61   AICc=342.08   BIC=361
+      ```
+  
+      显示模型为:
+      $$
+      y_t=c+0.5885y_{t-1}-0.3528\epsilon_{t-1}+0.0846\epsilon_{t-2}+0.1739\epsilon_{t-3}+\epsilon_t
+      $$
+      其中$$c = 0.7454\times(1-0.5885+NA)$$,$$\epsilon_t=\sqrt{sigma^2}$$
+  
+  
+  
+  
+
+## 扬–博克斯检验（**Ljung-Box Test**)
+
+- **原理:**
+
+检验时间序列数据**是否存在自相关性**，特别是**检查残差是否为白噪声**
+
+该检验的目的是检查模型的残差是否与时间序列的**滞后**相关，从而评估模型的拟合质量。如果残差不是白噪声，说明模型没有完全捕捉到数据中的规律。
+
+### 步骤
+
+- 从模型中提取残差:  $$\epsilon_t = y_t - \hat{y}_t$$
+
+  假设已经拟合了一个时间序列的模型(如ARIMA), 其中$$\hat{y}_t$$为预测值
+
+- 计算每个滞后期 $$k$$ 的自相关系数 $$\hat{\rho}_k$$，并选择一个滞后期范围 $$h$$
+
+  如: $$\hat{\rho}_1$$ 为$$y_t$$和$$y_{t-1}$$的自相关系数
+
+  如果时间序列数据是完全的白噪声，那么这些自相关系数应当接近于零
+
+- 根据公式计算 Ljung-Box 检验的统计量 $$Q$$
+
+  检验统计量的计算公式为:
+  $$
+  Q=n(n+2)\sum_{k=1}^h \frac{\rho_k^2}{n-k}
+  $$
+  其中：
+
+  - $$Q$$ 是检验统计量。
+  - $$n$$是样本的总数据点数。
+  - $$h$$ 是滞后期的最大值（通常选择较小的滞后期，例如 10）。
+  - $$\hat{\rho}_k$$ 是第 $$k$$个滞后的自相关系数。
+  - $$n-k$$ 是样本的自由度调整。
+
+- 计算 p 值，判断是否拒绝零假设
+
+  假设我们选择了显著性水平 $$\alpha = 0.05$$，如果$$p$$ 值大于 $$0.05$$，就不能拒绝零假设（即残差是白噪声），说明模型拟合得很好，残差没有显著的自相关性。如果$$ p$$ 值小于 $$0.05$$，则拒绝零假设，意味着残差存在显著的自相关性，说明模型的拟合存在问题。
+
+- 假设检验
+
+  Ljung-Box 检验的假设为：
+
+  - **零假设（$$H_0$$）**：残差是白噪声，所有的自相关系数为零，或者没有显著的自相关性。
+  - **备择假设（$$H_1$$）**：残差存在显著的自相关性，即至少有一个滞后期的自相关系数显著不为零
+
+### R 中的Box.test()函数
+
+- 语法:
+
+  ```R
+  box.test(x, lag = 1, type = c("Ljung-Box", "Box-Pierce"), fitdf = 0, ...)
+  ```
+
+  - `x`: 要进行 Ljung-Box 检验的时间序列。通常，`x` 是时间序列的**残差**，它来自已拟合的模型，如 `ARIMA` 模型。
+  - `lag`: 对应于公式中的$$h$$值
+  - `type`: 取值 `"Ljung-Box"` 或 `"Box-Pierce"`
+    - `"Ljung-Box"`：Ljung-Box 检验，调整了样本量，以使得统计量更加准确。
+    - `"Box-Pierce"`：Box-Pierce 检验，不考虑样本容量的调整，计算上更为简洁，但可能在样本量较小的情况下不太准确。
+  - `fitdf`: 拟合模型的**自由度**, 为模型中已估计的**参数数量**
+
+- 示例:
+
+  ```R
+  Box.test(est_1$residuals, lag = 10, type = "Ljung", fitdf = 3)
+  ```
+
+  输出:
+
+  ```javascript
+  Box-Ljung test
+  
+  data:  est_1$residuals
+  X-squared = 54.064, df = 7, p-value = 2.284e-09
+  ```
+
+  p值较小, 说明模型拟合的不好
+
