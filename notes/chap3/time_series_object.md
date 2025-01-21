@@ -12,7 +12,14 @@
 
 可以处理时间序列中的**缺失值**，并提供灵活的填补缺失值的方法
 
-函数:
+- 创建`zoo`对象:
+
+  ```R
+  zoo(x = NULL, order.by = index(x), frequency = NULL,
+    calendar = getOption("zoo.calendar", TRUE))
+  ```
+
+- 函数:
 
 	- **`rollapply(zoo_x, width, FUN)`**：滚动应用函数，计算滑动窗口的统计量（如均值、标准差等）
 	- **`na.approx(zoo_x)`**：插值函数，用于填补缺失值
