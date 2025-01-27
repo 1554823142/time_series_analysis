@@ -48,7 +48,9 @@
 
     这也是一个优化目标函数(惩罚函数), 使得$$AIC$$的值最小
 
-### ARIMA 算法(AutoRegressive Integrated Moving Average)
+### ARIMA 模型(AutoRegressive Integrated Moving Average)
+
+**差分自回归移动平均模型**
 
 本质就是把数据中带有趋势的(`trend`)的，带有季节性的(`seasonal`)的, 带有业务场景周期性(`domain cycle`)的规律先找出来，*一层一层将有规律的信息从数据中抽出来*，最后的数据就剩下没有规律的，或叫噪声，理想的时候是**白噪声**(`white noise series`)
 
@@ -117,9 +119,38 @@ $$
       y_t=c+0.5885y_{t-1}-0.3528\epsilon_{t-1}+0.0846\epsilon_{t-2}+0.1739\epsilon_{t-3}+\epsilon_t
       $$
       其中$$c = 0.7454\times(1-0.5885+NA)$$,$$\epsilon_t=\sqrt{sigma^2}$$
+    
+  - ps: 自回归移动平均模型不一定是唯一的
   
+    eg:有以下自回归移动平均模型:
+    $$
+    y_t=0.5\times y_{t-1}+0.24\times y_{t-2}+e_{t-1}+0.09\times e_{t-2}
+    $$
+    将自回归项与移动平均项各自放在一侧:
+    $$
+    y_t-0.5\times y_{t-1}-0.24\times y_{t-2}=e_{t}+0.6\times e_{t-1}+0.09\times e_{t-2}
+    $$
+    然后使用后移算子重写:
+    $$
+    y_t-0.5\times L \times y_t - 0.24 \times L^2 \times y_t = e_t +0.6 \times L \times e_t + 0.09 \times L^2 \times e_t
+    $$
+     然后因式分解可以消去一次, 这样就简化了
   
-  
+
+#### Wold定理
+
+>  任何协方差平稳的时间序列都可以写成两个时间序列之和，其中一个是确定性的，另一个是随机的。这为我们建立ARIMA模型建立了基础.
+
+- 定义
+
+  设$$X_i$$为一列idd, 且每个$$X_i$$的期望值为$$E[X_i]=\mu$$, 如果$$N$$是一个独立的随机变量, 表示实验的次数, 其期望值为$$E[N]$$, 则定理表明:
+  $$
+  E[\sum^N X_i]=E[N]\cdot E[X_1]
+  $$
+
+- 作用
+
+  意义在于它简化了计算复杂的随机过程的期望值
 
 ## 扬–博克斯检验（**Ljung-Box Test**)
 
